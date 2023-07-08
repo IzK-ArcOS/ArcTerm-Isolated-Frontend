@@ -3,7 +3,7 @@ import { getDirectory } from "../../api/fs/directory";
 import { Log, LogLevel } from "../../console";
 import { ArcOSVersion } from "../../env/main";
 import { UserName } from "../../userlogic/interfaces";
-import { Color, colors, VariableStore } from "../interface";
+import { type Color, colors, type VariableStore } from "../interface";
 import type { ArcTerm } from "../main";
 import { getServer } from "../../api/server";
 

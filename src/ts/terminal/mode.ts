@@ -29,7 +29,7 @@ function disclaimer(a: ArcTerm) {
   a.std.clear();
 
   a.std.writeColor(
-    `[█] You are currently in [ArcTerm mode].\n[█] Commands that require the ArcOS desktop have been disabled.\n\n`,
+    `[█] You are currently in [ArcTerm Isolated].\n[█] Commands that require ArcOS itself do not exist.\n\n`,
     "orange"
   );
 
