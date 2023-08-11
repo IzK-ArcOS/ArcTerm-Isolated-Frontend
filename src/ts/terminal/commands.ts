@@ -1,4 +1,5 @@
-import { Log, LogLevel } from "../console";
+import { Log } from "../console";
+import { LogLevel } from "../console/interface";
 import type { ArcTerm } from "./main";
 import { defaultCommand } from "./store";
 
@@ -7,16 +8,18 @@ export class ArcTermCommandHandler {
   history: string[] = [];
 
   constructor(term: ArcTerm) {
-    Log({
-      source: `ArcTerm ${term.referenceId}`,
-      msg: `Creating new ArcTermCommandHandler`,
-      level: LogLevel.info,
-    });
+    Log(
+      `ArcTerm ${term.referenceId}`,
+      `Creating new ArcTermCommandHandler`,
+      LogLevel.info
+    );
 
     this.term = term;
   }
 
   public async evaluate(cmd: string, args?: string[]) {
+    Log(`ArcTerm ${this.term.referenceId}`, `cmd.evaluate: ${cmd}`);
+
     this.history.push(`${cmd} ${args.join(" ")}`.trim());
 
     const command = this.getCommand(cmd);
@@ -26,16 +29,17 @@ export class ArcTermCommandHandler {
     await command.exec(cmd, args, this.term);
 
     if (!this.term.std || !this.term.input) return;
-
     if (this.term.std.verbose) this.term.std.writeLine("\n");
+
     this.term.input.unlock();
   }
 
   public getCommand(command: string) {
+    Log(`ArcTerm ${this.term.referenceId}`, `cmd.getCommand: ${command}`);
+
     const c = command.toLowerCase();
 
     for (let i = 0; i < this.term.commands.length; i++) {
-      console.log(this.term.commands[i]);
       const k = this.term.commands[i].keyword.toLowerCase();
 
       if (k == c) return this.term.commands[i];

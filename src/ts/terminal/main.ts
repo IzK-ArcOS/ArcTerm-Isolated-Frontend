@@ -1,4 +1,5 @@
-import { Log, LogLevel } from "../console";
+import { Log } from "../console";
+import { LogLevel } from "../console/interface";
 import { ArcOSVersion } from "../env/main";
 import sleep from "../sleep";
 import { ArcTermCommandHandler } from "./commands";
@@ -6,13 +7,14 @@ import { ArcTermEnv } from "./env";
 import { ArcTermInput } from "./input";
 import type { CommandStore } from "./interface";
 import { ArcTermStd } from "./std";
+import { gooseBumpsCommands } from "./store";
 import { ArcTermUtil } from "./util";
 import { ArcTermVariables } from "./var";
 
 /**
- * @WARNING   This part of ArcOS is seperated from the Svelte framework in
+ * @WARNING   This part of ArcOS is separated from the Svelte framework in
  *            order to make it easier to write and manage. Frequent checks
- *            are performed throught ArcTerm classes in order to keep it clean
+ *            are performed through ArcTerm classes in order to keep it clean
  *            and stop it from breaking unexpectedly.
  *
  * - IzKuipers, march 17 2023
@@ -32,12 +34,12 @@ export class ArcTerm {
   onload: (term: ArcTerm) => void;
 
   constructor(
-    windowElement: HTMLDivElement,
-    commandStore: CommandStore,
+    t: HTMLDivElement,
+    cS: CommandStore,
     cb?: (term: ArcTerm) => void
   ) {
-    this.target = windowElement;
-    this.commands = commandStore;
+    this.target = t;
+    this.commands = cS;
     this.onload = cb;
 
     this.initialize();
@@ -47,18 +49,16 @@ export class ArcTerm {
     this.util = new ArcTermUtil(this);
     this.referenceId = this.util.getReference();
 
-    Log({
-      source: `ArcTerm ${this.referenceId}`,
-      msg: `Initializing new ArcTerm`,
-      level: LogLevel.info,
-    });
-
-    if (!this.target) throw new Error("Can't initialize ArcTerm: no target");
+    Log(
+      `ArcTerm ${this.referenceId}`,
+      `Initializing new ArcTerm`,
+      LogLevel.info
+    );
 
     this.target.innerText = `Starting ArcTerm v${ArcOSVersion}...`;
 
     this.target.removeAttribute("style");
-    this.path = "./";
+    this.path = ".";
     this.commandHandler = new ArcTermCommandHandler(this);
     this.env = new ArcTermEnv(this);
     this.vars = new ArcTermVariables(this);
@@ -73,13 +73,20 @@ export class ArcTerm {
 
       await sleep(100);
 
+      if (this.env.gooseBumps)
+        this.commands = { a: [...this.commands, ...gooseBumpsCommands] }.a;
+
       this.input.unlock();
       this.util.intro();
       this.util.flushAccent();
+
+      if (this.env.gooseBumps) this.std.Warning("GooseBumps 👀\n\n");
     }, 1000);
   }
 
   public dispose() {
+    Log(`ArcTerm ${this.referenceId}`, "Disposing", LogLevel.info);
+
     if (!this.target) return;
 
     this.std.clear();
@@ -87,5 +94,17 @@ export class ArcTerm {
     this.env = null;
     this.input.lock();
     this.input = null;
+  }
+
+  public reload() {
+    Log(`ArcTerm ${this.referenceId}`, "Reloading", LogLevel.info);
+
+    this.dispose(); // Dispose the current instance, locking ArcTerm
+
+    // Re-initialize ArcTerm with the exact same initial parameters
+    // after the next frame has advanced
+    setTimeout(async () => {
+      await this.initialize();
+    });
   }
 }

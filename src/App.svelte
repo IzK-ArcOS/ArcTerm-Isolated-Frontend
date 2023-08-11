@@ -6,13 +6,18 @@
   import { rememberedLogin } from "./ts/api/getter";
   import { testConnection } from "./ts/api/test";
   import { getServer } from "./ts/api/server";
+  import { getAuthcode } from "./ts/api/authcode";
 
   let target: HTMLDivElement;
   let arcterm: ArcTerm;
 
   onMount(async () => {
-    await testConnection(getServer());
-    await rememberedLogin();
+    const server = getServer();
+
+    if (server) {
+      await testConnection(server, getAuthcode(server));
+      await rememberedLogin();
+    }
 
     arcterm = new ArcTerm(target, arcCommands, arcTermModeIntro);
   });

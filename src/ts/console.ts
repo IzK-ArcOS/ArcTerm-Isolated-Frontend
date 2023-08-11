@@ -32,7 +32,9 @@ export const LogLevelData: { [key: string]: { capt: string } } = {
 
 export const log = writable<LogItem[]>([]);
 
-export function Log(data: LogItem) {
+export function Log(source: string, msg: string, level = LogLevel.info) {
+  const data: LogItem = { source, msg, level };
+
   data.timestamp = new Date().getTime();
 
   const l = get(log);
@@ -44,7 +46,7 @@ export function Log(data: LogItem) {
 
   const d = LogLevelData[LogLevel[data.level]];
 
-  console.log(`ArcOS: ${t} [${d.capt}] ${data.source}: ${data.msg}`);
+  console.log(`ArcTerm: ${t} [${d.capt}] ${data.source}: ${data.msg}`);
 }
 
 export function compileStringLog(): string[] {

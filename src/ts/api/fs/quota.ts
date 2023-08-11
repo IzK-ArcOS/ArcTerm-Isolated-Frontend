@@ -7,7 +7,7 @@ export const defaultQuota: FSQuota = {
   used: 0,
   max: 0,
   free: 0,
-  username: "ArcOS",
+  username: "ArcTerm",
 };
 
 export async function getFSQuota(): Promise<FSQuota> {

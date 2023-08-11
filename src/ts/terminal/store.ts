@@ -38,7 +38,6 @@ export const arcCommands: CommandStore = [
   ArcFetch,
   Cd,
   Clear,
-  Colors,
   Desktop,
   Dir,
   Echo,
@@ -46,12 +45,10 @@ export const arcCommands: CommandStore = [
   Exit, */,
   Help,
   History,
-  LogDump,
   Logout,
   Mkdir,
   Rm,
   Reload,
-  UDD,
   Ver,
   Reset,
   Rf,
@@ -64,3 +61,5 @@ export const arcCommands: CommandStore = [
   Verbose /* 
   Desktop, */,
 ];
+
+export const gooseBumpsCommands: CommandStore = [Colors, UDD, LogDump];

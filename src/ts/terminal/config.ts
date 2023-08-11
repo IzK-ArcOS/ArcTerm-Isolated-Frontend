@@ -1,28 +1,39 @@
 import { get } from "svelte/store";
 import { readFile, writeFile } from "../api/fs/file";
-import { Log, LogLevel } from "../console";
+import { Log } from "../console";
 import { UserData } from "../userlogic/interfaces";
 import type { ArcTermEnv } from "./env";
 import type { ArcTerm } from "./main";
+import { LogLevel } from "../console/interface";
 
 export class ArcTermConfig {
   env: ArcTermEnv;
+  term: ArcTerm;
 
   constructor(e: ArcTermEnv, t: ArcTerm) {
-    Log({
-      source: `ArcTerm ${t.referenceId}`,
-      msg: `Creating new ArcTermConfig`,
-      level: LogLevel.info,
-    });
+    Log(
+      `ArcTerm ${t.referenceId}`,
+      `Creating new ArcTermConfig`,
+      LogLevel.info
+    );
 
     this.env = e;
+    this.term = t;
     this.loadConfigFile();
   }
 
   readonly configPath = "./arcterm.conf";
-  private readonly configKeys = ["prompt", "greeting", "logo", "promptColor"];
+  private readonly configKeys = [
+    "prompt",
+    "greeting",
+    "logo",
+    "promptColor",
+    "gooseBumps",
+  ];
 
   public getConfig() {
+    Log(`ArcTerm ${this.term.referenceId}`, `config.getConfig`);
+
     const obj = {};
 
     for (let i = 0; i < this.configKeys.length; i++) {
@@ -35,6 +46,8 @@ export class ArcTermConfig {
   }
 
   public loadConfig(json: object) {
+    Log(`ArcTerm ${this.term.referenceId}`, `config.loadConfig: loading JSON`);
+
     for (let i = 0; i < this.configKeys.length; i++) {
       const k = this.configKeys[i];
 
@@ -46,6 +59,11 @@ export class ArcTermConfig {
   }
 
   public async loadConfigFile() {
+    Log(
+      `ArcTerm ${this.term.referenceId}`,
+      `config.loadConfigFile: Getting ${this.configPath}`
+    );
+
     if (!get(UserData)) return;
 
     const file = await readFile(this.configPath);
@@ -67,12 +85,21 @@ export class ArcTermConfig {
   }
 
   public async writeConfig() {
+    Log(
+      `ArcTerm ${this.term.referenceId}`,
+      `config.writeConfig: Writing ${this.configPath}`
+    );
+
     const data = {};
 
     for (let i = 0; i < this.configKeys.length; i++) {
       const k = this.configKeys[i];
 
-      data[k] = this.env[k];
+      if (
+        k != "gooseBumps" ||
+        (typeof this.env[k] === "boolean" && this.env[k] == true)
+      )
+        data[k] = this.env[k];
     }
 
     const blob = new Blob([JSON.stringify(data, null, 2)], {

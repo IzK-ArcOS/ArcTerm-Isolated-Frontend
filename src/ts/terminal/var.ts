@@ -1,4 +1,5 @@
-import { Log, LogLevel } from "../console";
+import { Log } from "../console";
+import { LogLevel } from "../console/interface";
 import type { StaticVariableStore, Variable, VariableStore } from "./interface";
 import type { ArcTerm } from "./main";
 import { getArcTermStore } from "./var/store";
@@ -9,17 +10,22 @@ export class ArcTermVariables {
   private store: VariableStore = {};
 
   constructor(t: ArcTerm) {
-    Log({
-      source: `ArcTerm ${t.referenceId}`,
-      msg: "Creating new ArcTermVariables",
-      level: LogLevel.info,
-    });
+    Log(
+      `ArcTerm ${t.referenceId}`,
+      "Creating new ArcTermVariables",
+      LogLevel.info
+    );
 
     this.term = t;
     this.store = getArcTermStore(this.term);
   }
 
   async getAll(): Promise<StaticVariableStore> {
+    Log(
+      `ArcTerm ${this.term.referenceId}`,
+      `var.getAll: getting all variables`
+    );
+
     const result: StaticVariableStore = {};
     const entries = Object.entries(this.store);
 
@@ -35,12 +41,19 @@ export class ArcTermVariables {
   }
 
   get(key: string) {
+    Log(`ArcTerm ${this.term.referenceId}`, `var.get: getting "${key}"`);
+
     if (!this.store[key]) return key;
 
     return this.store[key].get();
   }
 
   async set(key: string, value: string) {
+    Log(
+      `ArcTerm ${this.term.referenceId}`,
+      `var.set: setting "${key}" to "${value}"`
+    );
+
     if (!this.store[key]) {
       const variable: Variable = {
         get: () => variable.value,
@@ -67,6 +80,8 @@ export class ArcTermVariables {
   }
 
   async delete(key: string) {
+    Log(`ArcTerm ${this.term.referenceId}`, `var.delete: deleting "${key}"`);
+
     if (!this.store[key] || this.store[key].readOnly) return false;
 
     await this.set(key, "");
@@ -75,6 +90,11 @@ export class ArcTermVariables {
   }
 
   replace(str: string) {
+    Log(
+      `ArcTerm ${this.term.referenceId}`,
+      `var.replace: injecting variables into ${str.length} characters`
+    );
+
     const variables = this.parseInlineNames(str);
 
     if (!variables.length) return str;
@@ -91,6 +111,11 @@ export class ArcTermVariables {
   }
 
   private parseInlineNames(str: string): string[] {
+    Log(
+      `ArcTerm ${this.term.referenceId}`,
+      `var.parseInlineNames: getting variable names from ${str.length} characters`
+    );
+
     const regex = /\$([a-zA-Z_][a-zA-Z0-9_]*)/g;
     const matches: string[] = [];
 

@@ -1,17 +1,14 @@
 import { get, writable } from "svelte/store";
 import { apiCall, ConnectedServer } from "../api/main";
-import { Log, LogLevel } from "../console";
+import { Log } from "../console";
 import { commitUserdata } from "./commit";
-import { UserToken, type AllUsers, UserData } from "./interfaces";
+import { type AllUsers, UserData, UserToken } from "./interfaces";
+import { LogLevel } from "../console/interface";
 
 export const committingUserData = writable<boolean>(false);
 
 export async function getUsers() {
-  Log({
-    msg: `Getting users`,
-    source: "userlogic/main.ts: getUsers",
-    level: LogLevel.info,
-  });
+  Log("userlogic/main.ts: getUsers", `Getting users`);
 
   const server = get(ConnectedServer);
 
@@ -31,11 +28,7 @@ export async function getUsers() {
 }
 
 export async function deleteUser() {
-  Log({
-    msg: `Delete users`,
-    source: "userlogic/main.ts: deleteUsers",
-    level: LogLevel.info,
-  });
+  Log("userlogic/main.ts: deleteUsers", `Delete users`);
 
   const server = get(ConnectedServer);
   const token = get(UserToken);
@@ -46,11 +39,11 @@ export async function deleteUser() {
 }
 
 export async function getUserdata(name: string) {
-  Log({
-    msg: `Getting userdata for "${name}"`,
-    source: "userlogic/main.ts: getUserdata",
-    level: LogLevel.info,
-  });
+  Log(
+    "userlogic/main.ts: getUserdata",
+    `Getting userdata for "${name}"`,
+    LogLevel.info
+  );
 
   const users = await getUsers();
 
@@ -60,12 +53,6 @@ export async function getUserdata(name: string) {
 }
 
 export async function setUserdata(data: UserData): Promise<boolean> {
-  Log({
-    msg: `Setting userdata`,
-    source: "userlogic/main.ts: setUserdata",
-    level: LogLevel.info,
-  });
-
   const server = get(ConnectedServer);
 
   if (!server) return false;
@@ -80,11 +67,11 @@ export async function setUserdata(data: UserData): Promise<boolean> {
   );
 
   if (req.valid) {
-    Log({
-      msg: `Userdata committed to API`,
-      source: "userlogic/main.ts: setUserdata",
-      level: LogLevel.info,
-    });
+    Log(
+      "userlogic/main.ts: setUserdata",
+      `Userdata committed to API`,
+      LogLevel.info
+    );
   }
 
   return;

@@ -30,7 +30,14 @@ export const Ri: Command = {
 
     term.std.Error("Missing parameters.");
   },
+  help(term) {
+    term.std.writeColor(
+      "Example: [ri] --url https://tinyurl.com/arcoslogo",
+      "blue"
+    );
+  },
   description: "Display image from ArcFS or URL",
+  syntax: "(--[file]) <[path]> (--[url]) <[url]> (--[height]) <[height]>",
 };
 
 async function displayFile(term: ArcTerm, fn: string, height: number) {

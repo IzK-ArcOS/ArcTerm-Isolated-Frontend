@@ -1,7 +1,8 @@
 import { get } from "svelte/store";
-import { Log, LogLevel } from "../console";
+import { Log } from "../console";
 import { UserData, UserName } from "./interfaces";
 import { committingUserData, setUserdata } from "./main";
+import { LogLevel } from "../console/interface";
 
 const source = "UserLogic: UserData watch";
 
@@ -15,22 +16,12 @@ export function commitUserdata(v: UserData) {
   committingUserData.set(true);
 
   if (get(UserName)) {
-    Log({
-      level: LogLevel.info,
-      msg: "Change Detected, committing",
-      source,
-    });
-
     const changed = setUserdata(v);
 
     unsetStatus();
 
     if (!changed) {
-      Log({
-        level: LogLevel.error,
-        msg: "Commit failed, setter returned false",
-        source,
-      });
+      Log(source, "Commit failed, setter returned false", LogLevel.error);
     }
 
     return;
@@ -38,11 +29,7 @@ export function commitUserdata(v: UserData) {
 
   unsetStatus();
 
-  Log({
-    level: LogLevel.warn,
-    msg: "Not committing, no username",
-    source,
-  });
+  Log(source, "Not committing, no username", LogLevel.warn);
 }
 
 function unsetStatus() {

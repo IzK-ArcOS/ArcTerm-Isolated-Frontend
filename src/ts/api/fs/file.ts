@@ -1,20 +1,24 @@
 import axios from "axios";
 import { get, writable } from "svelte/store";
-import { Log, LogLevel } from "../../console";
+import { Log } from "../../console";
+import { LogLevel } from "../../console/interface";
 import { UserToken } from "../../userlogic/interfaces";
-import { apiCall, ConnectedServer } from "../main";
+import { ConnectedServer } from "../main";
 import { generateParamStr } from "../params";
+import { getAuthcode } from "../authcode";
+import { getServer } from "../server";
 
 export const abortFileReader = writable<boolean>(false);
 
 export async function readFile(path: string): Promise<ArrayBuffer | false> {
-  Log({
-    source: "fs/file.ts: readFile",
-    msg: `Requesting file contents of "${path}" from ArcAPI`,
-    level: LogLevel.info,
-  });
+  Log(
+    "fs/file.ts: readFile",
+    `Requesting file contents of "${path}" from ArcAPI`,
+    LogLevel.info
+  );
 
   const server = get(ConnectedServer);
+  const authCode = getAuthcode(getServer());
 
   if (!server) return false;
 
@@ -24,78 +28,57 @@ export async function readFile(path: string): Promise<ArrayBuffer | false> {
     },
   };
 
-  let controller = new AbortController();
+  const controller = new AbortController();
+  const params = generateParamStr({ ac: authCode, path: btoa(path) });
 
-  const params = generateParamStr({ path: btoa(path) });
-
-  let req = await fetch(`${server}/fs/file/get${params}`, {
-    ...init,
-    signal: controller.signal,
-  });
-
-  abortFileReader.set(false);
-
-  abortFileReader.subscribe((v) => {
-    if (!v) return;
-
-    Log({
-      source: "fs/file.ts: readFile",
-      msg: `Aborting readFile for "${path}" as requested by the user...`,
-      level: LogLevel.error,
+  try {
+    let req = await fetch(`${server}/fs/file/get${params}`, {
+      ...init,
+      signal: controller.signal,
     });
 
-    controller.abort();
-
     abortFileReader.set(false);
-  });
 
-  if (req.status != 200) return false;
+    abortFileReader.subscribe((v) => {
+      if (!v) return;
 
-  const x = await req.blob();
+      Log(
+        "fs/file.ts: readFile",
+        `Aborting readFile for "${path}" as requested by the user...`,
+        LogLevel.error
+      );
 
-  // Free up used memory
-  req = null;
+      controller.abort();
 
-  return await x.arrayBuffer();
-}
+      abortFileReader.set(false);
+    });
 
-export async function deleteItem(path: string) {
-  Log({
-    source: "fs/file.ts: deleteItem",
-    msg: `Deleting item "${path}" from ArcFS`,
-    level: LogLevel.info,
-  });
+    if (req.status != 200) return false;
 
-  const server = get(ConnectedServer);
+    const x = await req.blob();
 
-  if (!server) return false;
+    // Free up used memory
+    req = null;
 
-  const req = await apiCall(
-    server,
-    "fs/rm",
-    { path: btoa(path) },
-    get(UserToken),
-    null,
-    null,
-    true
-  );
-
-  return !(req.valid == false);
+    return await x.arrayBuffer();
+  } catch {
+    return false;
+  }
 }
 
 export async function writeFile(path: string, data: Blob): Promise<boolean> {
+  Log("fs/directory.ts: writeFile", `Creating ${path}`);
+
   const server = get(ConnectedServer);
+  const authCode = getAuthcode(getServer());
 
   if (!server) return false;
 
-  const params = generateParamStr({ path: btoa(path) });
+  const params = generateParamStr({ path: btoa(path), ac: authCode });
 
   const req = await axios.post(`${server}/fs/file/write${params}`, data, {
     headers: {
       Authorization: `Bearer ${get(UserToken)}`,
-    },
-    onUploadProgress(progress) {
-      const perc = (progress.loaded / progress.total) * 100;
     },
   });
 

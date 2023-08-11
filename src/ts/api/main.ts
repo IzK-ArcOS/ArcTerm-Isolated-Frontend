@@ -1,9 +1,10 @@
-import { writable } from "svelte/store";
+import { get, writable } from "svelte/store";
 import { generateCredToken } from "./cred";
 import type { Cred, DefaultResponse, Params } from "./interface";
 import { generateParamStr } from "./params";
 
 export const ConnectedServer = writable<string>(null);
+export const ServerAuthCode = writable<string>(null);
 
 export async function apiCall(
   host: string,
@@ -24,7 +25,7 @@ export async function apiCall(
   };
 
   const noAuth = !credAuth && !tokenAuth;
-  const paramStr = generateParamStr(params);
+  const paramStr = generateParamStr({ ...params, ac: get(ServerAuthCode) });
 
   let req;
 

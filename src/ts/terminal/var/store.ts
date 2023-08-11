@@ -1,18 +1,19 @@
 import { get } from "svelte/store";
 import { getDirectory } from "../../api/fs/directory";
-import { Log, LogLevel } from "../../console";
+import { Log } from "../../console";
 import { ArcOSVersion } from "../../env/main";
 import { UserName } from "../../userlogic/interfaces";
 import { type Color, colors, type VariableStore } from "../interface";
 import type { ArcTerm } from "../main";
 import { getServer } from "../../api/server";
+import { LogLevel } from "../../console/interface";
 
 export function getArcTermStore(term: ArcTerm): VariableStore {
-  Log({
-    source: `ArcTerm ${term.referenceId}`,
-    msg: "Creating new ArcTermVariableStore",
-    level: LogLevel.info,
-  });
+  Log(
+    `ArcTerm ${term.referenceId}`,
+    "Creating new ArcTermVariableStore",
+    LogLevel.info
+  );
   return {
     prompt: {
       get: () => term.env.prompt,
@@ -40,7 +41,7 @@ export function getArcTermStore(term: ArcTerm): VariableStore {
       canDelete: false,
     },
     pwd: {
-      get: () => term.path,
+      get: () => (term.path || "./").replace("./", ""),
       set: async (v) => {
         const dir = await getDirectory(v);
 

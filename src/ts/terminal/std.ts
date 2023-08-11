@@ -1,28 +1,32 @@
 import { writable } from "svelte/store";
-import type { Process } from "../applogic/interface";
-import { Log, LogLevel } from "../console";
+import { Log } from "../console";
 import type { ArcTermEnv } from "./env";
 import type { Color } from "./interface";
 import type { ArcTerm } from "./main";
+import { LogLevel } from "../console/interface";
 
 export class ArcTermStd {
   target: HTMLDivElement;
-  process: Process;
   term: ArcTerm;
   env: ArcTermEnv;
   verbose = true;
 
   constructor(parent: ArcTerm) {
-    Log({
-      source: `ArcTerm ${parent.referenceId}`,
-      msg: `Creating new ArcTermStd`,
-      level: LogLevel.info,
-    });
+    Log(
+      `ArcTerm ${parent.referenceId}`,
+      `Creating new ArcTermStd`,
+      LogLevel.info
+    );
 
     this.target = parent.target;
-    this.process = parent.process;
     this.term = parent;
     this.env = parent.env;
+  }
+
+  public write(str: string, target = this.target) {
+    const el = this.writeLine(str, true, target);
+
+    return el;
   }
 
   public writeLine(str: string, inline = false, target = this.target) {
@@ -39,36 +43,14 @@ export class ArcTermStd {
     return el;
   }
 
-  public writeSeperator(length: number) {
+  public writeSeparator(length: number) {
+    Log(
+      `ArcTerm ${this.term.referenceId}`,
+      `std.writeSeparator: drawing with length of ${length}`,
+      LogLevel.info
+    );
+
     this.writeLine(``.padEnd(length, "-"));
-  }
-
-  public Error(context: string) {
-    if (!this.verbose) return;
-
-    this.writeColor(`[Error]: ${context}`, "red");
-  }
-
-  public write(str: string, target = this.target) {
-    const el = this.writeLine(str, true, target);
-
-    return el;
-  }
-
-  public update(el: HTMLDivElement, str: string) {
-    if (!el) return false;
-
-    el.innerText = "";
-
-    this.write(str, this.target);
-  }
-
-  public updateColor(el: HTMLDivElement, str: string, color: Color) {
-    if (!el) return false;
-
-    el.innerText = "";
-
-    this.writeColor(str, color, "white", false, el);
   }
 
   public writeColor(
@@ -112,8 +94,68 @@ export class ArcTermStd {
     this.target.append(el);
   }
 
-  public clear() {
-    this.target.innerText = "";
+  public update(el: HTMLDivElement, str: string) {
+    if (!el) return false;
+
+    Log(
+      `ArcTerm ${this.term.referenceId}`,
+      `std.update: ${el.innerText.length} -> ${str.length}`,
+      LogLevel.info
+    );
+
+    el.innerText = "";
+
+    this.write(str, this.target);
+  }
+
+  public updateColor(el: HTMLDivElement, str: string, color: Color) {
+    Log(
+      `ArcTerm ${this.term.referenceId}`,
+      `std.updateColor: ${el.innerText.length} -> ${str.length}`,
+      LogLevel.info
+    );
+
+    if (!el) return false;
+
+    el.innerText = "";
+
+    this.writeColor(str, color, "white", false, el);
+  }
+
+  public Error(context: string) {
+    Log(
+      `ArcTerm ${this.term.referenceId}`,
+      `std.Error: ${context.replaceAll("\n", "\\n")}`,
+      LogLevel.error
+    );
+
+    if (!this.verbose) return;
+
+    this.writeColor(`[Error]: ${context}`, "red");
+  }
+
+  public Warning(context: string) {
+    Log(
+      `ArcTerm ${this.term.referenceId}`,
+      `std.Warning: ${context.replaceAll("\n", "\\n")}`,
+      LogLevel.warn
+    );
+
+    if (!this.verbose) return;
+
+    this.writeColor(`[Warning]: ${context}`, "orange");
+  }
+
+  public Info(context: string) {
+    Log(
+      `std.ArcTerm ${this.term.referenceId}`,
+      `Info: ${context.replaceAll("\n", "\\n")}`,
+      LogLevel.info
+    );
+
+    if (!this.verbose) return;
+
+    this.writeColor(`[Info]: ${context}`, "blue");
   }
 
   public async read(
@@ -124,6 +166,12 @@ export class ArcTermStd {
     value = ""
   ): Promise<string> {
     if (!this.target) return "";
+
+    Log(
+      `ArcTerm ${this.term.referenceId}`,
+      `std.read: ${prefix}${suffix}`,
+      LogLevel.info
+    );
 
     const current = this.term.input.current;
     const commit = writable<boolean>(false);
@@ -143,6 +191,8 @@ export class ArcTermStd {
     this.term.input.current = input;
 
     input.addEventListener("keydown", (e) => {
+      if (!e.key) return;
+
       const key = e.key.toLowerCase();
 
       if (key != "enter") return;
@@ -159,5 +209,15 @@ export class ArcTermStd {
         resolve(input.value);
       });
     });
+  }
+
+  public clear() {
+    Log(
+      `ArcTerm ${this.term.referenceId}`,
+      `std.clear: Clearing terminal`,
+      LogLevel.info
+    );
+
+    this.target.innerText = "";
   }
 }

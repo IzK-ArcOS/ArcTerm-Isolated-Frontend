@@ -5,7 +5,7 @@ export const Reset: Command = {
   keyword: "reset",
   async exec(cmd, argv, term) {
     term.std.writeLine(
-      "Are you sure you want to reset ArcOS? This will not affect any ArcAPI data.\n\n"
+      "Are you sure you want to reset ArcTerm Isolated? This will not affect any ArcAPI data.\n\n"
     );
     const confirm = (await term.std.read("Y/N [", "]", 1)).toLowerCase();
 
@@ -15,5 +15,5 @@ export const Reset: Command = {
     location.reload();
     await sleep(3000);
   },
-  description: "Reset local ArcOS instance",
+  description: "Reset local ArcTerm Isolated instance",
 };
