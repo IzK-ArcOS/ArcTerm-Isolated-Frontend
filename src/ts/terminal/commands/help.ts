@@ -16,6 +16,9 @@ export const Help: Command = {
 
     all(term);
   },
+  help(term) {
+    term.std.writeColor("Example: [help] help", "blue");
+  },
   description: "Display a list of built-in commands",
   syntax: "([command?])",
 };
@@ -26,12 +29,10 @@ function all(term: ArcTerm) {
   });
 
   for (let i = 0; i < cmd.length; i++) {
-    if (!cmd[i]) continue;
-
     const a = cmd[i].keyword.toUpperCase().padEnd(15, " ");
     const b = cmd[i].description;
 
-    term.std.writeColor(`[${a}]${b}`, "orange");
+    term.std.writeColor(`[${a}]${b}`, cmd[i].hidden ? "purple" : "orange");
   }
 }
 
@@ -41,9 +42,17 @@ function specific(command: string, term: ArcTerm) {
   if (!c || c.keyword == defaultCommand.keyword)
     return term.std.Error(`${command}: command not found.`);
 
-  term.std.writeColor(`[${c.keyword.toUpperCase()}]: ${c.description}`, "blue");
+  if (!c.help) {
+    term.std.writeColor(
+      `[${c.keyword.toUpperCase()}]: ${c.description}`,
+      "blue"
+    );
 
-  term.std.writeLine("\n");
+    term.std.writeLine("\n");
+  }
 
   term.std.writeColor(`Usage: [${c.keyword}] ${c.syntax || ""}`, "blue");
+  term.std.writeLine("\n");
+
+  if (c.help) return c.help(term);
 }
