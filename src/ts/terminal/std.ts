@@ -1,9 +1,10 @@
 import { writable } from "svelte/store";
 import { Log } from "../console";
+import { LogLevel } from "../console/interface";
 import type { ArcTermEnv } from "./env";
 import type { Color } from "./interface";
 import type { ArcTerm } from "./main";
-import { LogLevel } from "../console/interface";
+import { ArcTermStdSelect } from "./std/select";
 
 export class ArcTermStd {
   target: HTMLDivElement;
@@ -44,12 +45,6 @@ export class ArcTermStd {
   }
 
   public writeSeparator(length: number) {
-    Log(
-      `ArcTerm ${this.term.referenceId}`,
-      `std.writeSeparator: drawing with length of ${length}`,
-      LogLevel.info
-    );
-
     this.writeLine(``.padEnd(length, "-"));
   }
 
@@ -97,29 +92,22 @@ export class ArcTermStd {
   public update(el: HTMLDivElement, str: string) {
     if (!el) return false;
 
-    Log(
-      `ArcTerm ${this.term.referenceId}`,
-      `std.update: ${el.innerText.length} -> ${str.length}`,
-      LogLevel.info
-    );
-
     el.innerText = "";
 
     this.write(str, this.target);
   }
 
-  public updateColor(el: HTMLDivElement, str: string, color: Color) {
-    Log(
-      `ArcTerm ${this.term.referenceId}`,
-      `std.updateColor: ${el.innerText.length} -> ${str.length}`,
-      LogLevel.info
-    );
-
+  public updateColor(
+    el: HTMLDivElement,
+    str: string,
+    pri: Color,
+    sec: Color = "white"
+  ) {
     if (!el) return false;
 
     el.innerText = "";
 
-    this.writeColor(str, color, "white", false, el);
+    this.writeColor(str, pri, sec, false, el);
   }
 
   public Error(context: string) {
@@ -165,7 +153,7 @@ export class ArcTermStd {
     pswd = false,
     value = ""
   ): Promise<string> {
-    if (!this.target) return "";
+    if (!this.target) return "asdf";
 
     Log(
       `ArcTerm ${this.term.referenceId}`,
@@ -212,12 +200,12 @@ export class ArcTermStd {
   }
 
   public clear() {
-    Log(
-      `ArcTerm ${this.term.referenceId}`,
-      `std.clear: Clearing terminal`,
-      LogLevel.info
-    );
-
     this.target.innerText = "";
+  }
+
+  public async select(options: string[], color?: Color): Promise<number> {
+    const select = new ArcTermStdSelect(this, color);
+
+    return await select.create(options);
   }
 }

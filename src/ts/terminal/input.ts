@@ -1,10 +1,10 @@
-import { get } from "svelte/store";
 import { Log } from "../console";
+import sleep from "../sleep";
 import type { ArcTermEnv } from "./env";
 import type { ArcTerm } from "./main";
 
 export class ArcTermInput {
-  private lockInput = false;
+  lockInput = false;
   target: HTMLDivElement;
   env: ArcTermEnv;
   term: ArcTerm;
@@ -40,20 +40,14 @@ export class ArcTermInput {
   }
 
   public lock() {
-    Log(`ArcTerm ${this.term.referenceId}`, `input.lock`);
-
     this.lockInput = true;
   }
 
   public unlock() {
-    Log(`ArcTerm ${this.term.referenceId}`, `input.unlock`);
-
     this.lockInput = false;
   }
 
   private getPrompt() {
-    Log(`ArcTerm ${this.term.referenceId}`, `input.getPrompt`);
-
     return this.term.vars.replace(this.env.prompt);
   }
 
@@ -118,24 +112,37 @@ export class ArcTermInput {
     this.current.value = latest;
   }
 
-  public async processCommands(split: string[]) {
-    Log(
-      `ArcTerm ${this.term.referenceId}`,
-      `input.processCommands: ${split.length} parts`
-    );
+  public async processCommands(split: string[], file = "") {
+    await sleep(0);
 
     for (let i = 0; i < split.length; i++) {
       const str = this.term.vars.replace(split[i].trim());
       const args = str.split(" ");
       const cmd = args[0];
 
+      if (cmd.trim() == "exit" && file) return false;
+
+      if (cmd.startsWith("#") || !cmd) continue;
+
       args.shift();
 
-      await this.term.commandHandler.evaluate(cmd, args);
+      const success = await this.term.commandHandler.evaluate(
+        cmd,
+        args,
+        !!file
+      );
+
+      if (!success) {
+        return false;
+      }
 
       this.lock();
+
+      await sleep(0);
     }
 
     this.unlock();
+
+    return true;
   }
 }

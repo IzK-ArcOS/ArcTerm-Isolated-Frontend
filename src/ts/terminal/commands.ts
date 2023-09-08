@@ -1,8 +1,8 @@
 import { Log } from "../console";
 import { LogLevel } from "../console/interface";
+import { Default } from "./commands/default";
+import type { Command } from "./interface";
 import type { ArcTerm } from "./main";
-import { defaultCommand } from "./store";
-
 export class ArcTermCommandHandler {
   term: ArcTerm;
   history: string[] = [];
@@ -17,34 +17,51 @@ export class ArcTermCommandHandler {
     this.term = term;
   }
 
-  public async evaluate(cmd: string, args?: string[]) {
+  public async evaluate(
+    cmd: string,
+    args?: string[],
+    isScript = false,
+    provider?: Command[]
+  ) {
     Log(`ArcTerm ${this.term.referenceId}`, `cmd.evaluate: ${cmd}`);
 
-    this.history.push(`${cmd} ${args.join(" ")}`.trim());
+    if (cmd.startsWith("#")) return;
 
-    const command = this.getCommand(cmd);
+    // Don't bother appending script lines to the history
+    if (!isScript) this.history.push(`${cmd} ${args.join(" ")}`.trim());
 
-    if (this.term.input) this.term.input.current.disabled = true;
+    const command = this.getCommand(cmd, provider);
 
-    await command.exec(cmd, args, this.term);
+    if (isScript && command.keyword == "default") return false;
 
-    if (!this.term.std || !this.term.input) return;
-    if (this.term.std.verbose) this.term.std.writeLine("\n");
+    if (this.term.input && this.term.input.current)
+      this.term.input.current.disabled = true;
 
-    this.term.input.unlock();
-  }
+    const result = await command.exec(cmd, args, this.term);
 
-  public getCommand(command: string) {
-    Log(`ArcTerm ${this.term.referenceId}`, `cmd.getCommand: ${command}`);
-
-    const c = command.toLowerCase();
-
-    for (let i = 0; i < this.term.commands.length; i++) {
-      const k = this.term.commands[i].keyword.toLowerCase();
-
-      if (k == c) return this.term.commands[i];
+    if (result == false) {
+      return false;
     }
 
-    return defaultCommand;
+    if (!this.term.std || !this.term.input) return true;
+    if (this.term.std.verbose && !isScript) this.term.std.writeLine("\n");
+
+    this.term.input.unlock();
+
+    return command.keyword != "default";
+  }
+
+  public getCommand(command: string, provider?: Command[]) {
+    const c = command.toLowerCase();
+
+    const commands = provider ? provider : this.term.commands;
+
+    for (let i = 0; i < commands.length; i++) {
+      const k = commands[i].keyword.toLowerCase();
+
+      if (k == c) return commands[i];
+    }
+
+    return Default;
   }
 }

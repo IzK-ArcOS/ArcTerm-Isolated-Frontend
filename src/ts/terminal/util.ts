@@ -31,8 +31,6 @@ export class ArcTermUtil {
   }
 
   public flushAccent() {
-    Log(`ArcTerm ${this.reference}`, `Retrieving accent from ArcTerm config`);
-
     this.term.target.setAttribute(
       "style",
       `--terminal-accent: var(--clr-${this.term.env.promptColor}-fg);`
@@ -41,8 +39,6 @@ export class ArcTermUtil {
 
   public intro() {
     if (!this.term || !this.term.std) return;
-
-    Log(`ArcTerm ${this.reference}`, `Displaying intro`);
 
     ArcTermIntro(this.term);
 

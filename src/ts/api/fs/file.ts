@@ -7,6 +7,7 @@ import { ConnectedServer } from "../main";
 import { generateParamStr } from "../params";
 import { getAuthcode } from "../authcode";
 import { getServer } from "../server";
+import type { PartialArcFile } from "../interface";
 
 export const abortFileReader = writable<boolean>(false);
 
@@ -83,4 +84,12 @@ export async function writeFile(path: string, data: Blob): Promise<boolean> {
   });
 
   return req.status == 200;
+}
+
+export function sortFiles(dir: PartialArcFile[]) {
+  if (!dir) return [];
+
+  return dir.sort((a, b) =>
+    a.filename.toLowerCase() > b.filename.toLowerCase() ? 1 : -1
+  );
 }

@@ -5,6 +5,7 @@ import { UserData } from "../userlogic/interfaces";
 import type { ArcTermEnv } from "./env";
 import type { ArcTerm } from "./main";
 import { LogLevel } from "../console/interface";
+import { arrayToText } from "../api/fs/file/conversion";
 
 export class ArcTermConfig {
   env: ArcTermEnv;
@@ -32,8 +33,6 @@ export class ArcTermConfig {
   ];
 
   public getConfig() {
-    Log(`ArcTerm ${this.term.referenceId}`, `config.getConfig`);
-
     const obj = {};
 
     for (let i = 0; i < this.configKeys.length; i++) {
@@ -46,8 +45,6 @@ export class ArcTermConfig {
   }
 
   public loadConfig(json: object) {
-    Log(`ArcTerm ${this.term.referenceId}`, `config.loadConfig: loading JSON`);
-
     for (let i = 0; i < this.configKeys.length; i++) {
       const k = this.configKeys[i];
 
@@ -70,8 +67,7 @@ export class ArcTermConfig {
 
     if (!file) return this.writeConfig();
 
-    const enc = new TextDecoder("utf-8");
-    const d = enc.decode(new Uint8Array(file));
+    const d = arrayToText(file);
 
     let json;
 

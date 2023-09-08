@@ -88,6 +88,14 @@ div.terminal-renderer div.prompt input:disabled {
   color: var(--fg) !important;
 }
 
+div.terminal-renderer div.userinput {
+  display: flex;
+  white-space: pre;
+}
+
+div.terminal-renderer div.userinput input {
+}
+
 div.terminal-renderer div.prompt div.inner {
   flex-grow: 1;
   display: flex;
