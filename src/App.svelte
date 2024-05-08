@@ -1,12 +1,11 @@
 <script lang="ts">
+  import { getAuthcode } from "$ts/server/authcode";
+  import { getServer } from "$ts/server/multi";
+  import { testConnection } from "$ts/server/test";
   import { onMount } from "svelte";
   import { ArcTerm } from "./ts/terminal/main";
-  import { arcCommands } from "./ts/terminal/store";
   import { arcTermModeIntro } from "./ts/terminal/mode";
-  import { rememberedLogin } from "./ts/api/getter";
-  import { testConnection } from "./ts/api/test";
-  import { getServer } from "./ts/api/server";
-  import { getAuthcode } from "./ts/api/authcode";
+  import { arcCommands } from "./ts/terminal/store";
 
   let target: HTMLDivElement;
   let arcterm: ArcTerm;
@@ -16,7 +15,7 @@
 
     if (server) {
       await testConnection(server, getAuthcode(server));
-      await rememberedLogin();
+      // await rememberedLogin();
     }
 
     arcterm = new ArcTerm(target, arcCommands, arcTermModeIntro);

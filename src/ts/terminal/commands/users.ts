@@ -1,29 +1,79 @@
-import type { AllUsers } from "../../userlogic/interfaces";
-import { getUsers } from "../../userlogic/main";
+import { tryJsonConvert } from "$ts/json";
+import { getUsers } from "$ts/server/user/get";
+import { UserCache } from "$ts/stores/user";
+import type { AllUsers } from "$types/user";
+import Fuse from "fuse.js";
 import type { Command } from "../interface";
+import type { ArcTerm } from "../main";
 
 export const Users: Command = {
   keyword: "users",
-  async exec(cmd, argv, term) {
-    const users = (await getUsers()) as AllUsers;
-    const entries = Object.entries(users);
-    const names = Object.keys(users);
+  async exec(cmd, argv, term, flags) {
+    const username = tryJsonConvert<string>(flags.search);
 
-    for (let i = 0; i < entries.length; i++) {
-      const role = entries[i][1].acc.admin ? "Administrator" : "Regular user";
-      const name = entries[i][0].padEnd(getMaxLength(names), " ");
-      term.std.writeColor(`[${name}]: ${role}`, "blue");
-    }
+    UserCache.clear();
+
+    if (!username) return allUsers(term);
+
+    return searchFor(username, await getUsers(), term);
   },
   description: "Display ArcAPI users",
+  flags: [
+    {
+      keyword: "search",
+      value: {
+        name: "user",
+        type: "string",
+      },
+      description: "A username to search for.",
+    },
+  ],
 };
+
+async function allUsers(term: ArcTerm) {
+  const users = (await getUsers()) as AllUsers;
+  const entries = Object.entries(users);
+  const names = Object.keys(users);
+
+  for (const [name, user] of entries) {
+    const role = user.acc.admin ? "Administrator" : "Regular user";
+    const nameStr = name.padEnd(getMaxLength(names), " ");
+    term.std.writeColor(`[${nameStr}]: ${role}`, "blue");
+  }
+}
+
+function searchFor(username: string, users: AllUsers, term: ArcTerm) {
+  const userObject = Object.entries(users).map((a) => ({
+    ...a[1],
+    name: a[0],
+  }));
+
+  const options: Fuse.IFuseOptions<any> = {
+    includeScore: true,
+    keys: ["name"],
+    threshold: 0.3,
+  };
+
+  const fuse = new Fuse(userObject, options);
+  const result = fuse.search(username);
+  const names = Object.keys(users);
+
+  for (const user of result) {
+    const role = user.item.acc.admin ? "Administrator" : "Regular user";
+    const name = user.item.name.padEnd(getMaxLength(names), " ");
+
+    term.std.writeColor(`[${name}]: ${role}`, "blue");
+  }
+
+  return result;
+}
 
 function getMaxLength(users: string[]) {
   let length = 0;
 
-  for (let i = 0; i < users.length; i++) {
-    if (users[i].length > length) length = users[i].length;
+  for (const user of users) {
+    if (user.length > length) length = user.length;
   }
 
-  return length + 5;
+  return length + 2;
 }

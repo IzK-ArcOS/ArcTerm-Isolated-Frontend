@@ -1,33 +1,38 @@
-import { getDirectory } from "../../api/fs/directory";
-import { getParentDirectory } from "../../api/fs/main";
+import { readDirectory } from "$ts/server/fs/dir";
+import { UserDirectory } from "$types/fs";
 import type { Command } from "../interface";
+import type { ArcTerm } from "../main";
 
 export const Cd: Command = {
   keyword: "cd",
   async exec(cmd, argv, term) {
-    const dir = argv.join(" ");
-    const newDir = (term.path != "./" ? `${term.path}/${dir}` : dir).replaceAll(
-      "//",
-      "/"
-    );
+    const cwd = term.path.endsWith("/") ? term.path.slice(0, -1) : term.path;
+    const newPath = argv.join(" ");
+    const path = `${cwd}/${newPath}`;
 
-    if (dir == "..") {
-      term.path = getParentDirectory(term.path as string);
+    if (newPath == "/") return (term.path = "./");
 
-      return;
+    const directory = await readDirectory(path);
+
+    if (!directory) {
+      return err(term, path);
     }
 
-    if (dir.includes("//")) return term.std.Error("Malformed path");
+    const dir = directory as UserDirectory;
 
-    if (dir == "/") return (term.path = "./");
+    if (dir.scopedPath.includes("..")) return err(term, path);
 
-    if (dir == ".") return;
-
-    if (!(await getDirectory(newDir)))
-      return term.std.Error(`Can't change to "${dir}": Path not found`);
-
-    term.path = newDir;
+    term.path = dir.scopedPath;
+  },
+  help(term) {
+    term.std.writeColor("[NOTE]: Capitalization matters.", "yellow");
+    //term.std.writeLine("Change the directory to the specified relative path.\n\n");
+    term.std.writeColor("Example: [cd] ../Documents", "blue");
   },
   description: "Change directory",
   syntax: "[<path>]",
 };
+
+function err(t: ArcTerm, p: string) {
+  return t.std.Error(`Can't change to "${p}": Path not found`);
+}

@@ -1,11 +1,7 @@
-import { get } from "svelte/store";
-import { getServer } from "../api/server";
-import { Log } from "../console";
-import { UserName } from "../userlogic/interfaces";
+import { Log } from "$ts/console";
 import type { Color } from "./interface";
 import { ArcTermIntro } from "./intro";
 import type { ArcTerm } from "./main";
-import { LogLevel } from "../console/interface";
 
 export class ArcTermUtil {
   term: ArcTerm;
@@ -31,6 +27,8 @@ export class ArcTermUtil {
   }
 
   public flushAccent() {
+    if (this.term.app) return;
+
     this.term.target.setAttribute(
       "style",
       `--terminal-accent: var(--clr-${this.term.env.promptColor}-fg);`
@@ -42,13 +40,7 @@ export class ArcTermUtil {
 
     ArcTermIntro(this.term);
 
-    const username = get(UserName);
-    const server = getServer();
-    const path = (this.term.path || "./").replace("./", "");
-    const out = this.term.env.greeting
-      .replace("&u", username)
-      .replace("&s", server)
-      .replace("&p", path);
+    const out = this.term.vars.replace(this.term.env.greeting);
 
     this.term.std.writeColor(`${out}\n\n`, this.term.env.promptColor as Color);
   }

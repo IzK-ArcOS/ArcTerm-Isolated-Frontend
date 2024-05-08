@@ -1,4 +1,3 @@
-import { switchExists } from "../argv";
 import type { Command } from "../interface";
 import type { ArcTerm } from "../main";
 import { gooseBumpsCommands as commands } from "../store";
@@ -8,7 +7,7 @@ export const Goose: Command = {
   keyword: "goose",
   async exec(c, argv, term) {
     if (argv[0] != "bumps") {
-      await Default.exec(c, argv, term);
+      await Default.exec(c, argv, term, {});
 
       return;
     }
@@ -19,6 +18,7 @@ export const Goose: Command = {
     return await gooses(term);
   },
   description: "GooseBumps 👀",
+  hidden: true,
 };
 
 function dummy(term: ArcTerm) {
@@ -52,22 +52,21 @@ function dummy(term: ArcTerm) {
 }
 
 async function gooses(term: ArcTerm) {
-  term.std.Warning(
-    "Super duper secret thingy approaching! Welcome to the GooseBumps."
-  );
+  term.std.Warning("Super duper secret thingy approaching! Welcome to the GooseBumps.");
   term.std.writeLine("\n");
 
   const options = {
     "(Cancel)": "$cancel",
+    "Change State": "state",
     "Print Colors": "colors",
     "Dump UserData": "udd",
     "Dump Logs": "logdump",
+    "Submit Test Bug Report": "bugrep",
+    "View base report info": "repinfo",
+    "Crash ArcOS": "err",
   };
 
-  const cmd =
-    Object.values(options)[
-      await term.std.select(Object.keys(options), "orange")
-    ];
+  const cmd = Object.values(options)[await term.std.select(Object.keys(options), "orange")];
 
   if (cmd == "$cancel") return;
 

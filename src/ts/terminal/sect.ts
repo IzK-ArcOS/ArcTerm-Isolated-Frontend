@@ -1,5 +1,5 @@
-import { Log } from "../console";
-import { LogLevel } from "../console/interface";
+import { Log } from "$ts/console";
+import { LogLevel } from "$types/console";
 import type { Sections } from "./interface";
 import type { ArcTerm } from "./main";
 

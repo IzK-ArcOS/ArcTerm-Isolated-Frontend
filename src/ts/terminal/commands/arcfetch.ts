@@ -1,11 +1,12 @@
-import { get } from "svelte/store";
-import { formatBytes } from "../../api/fs/sizes";
-import { getDeviceInfo } from "../../device/main";
-import { UserName } from "../../userlogic/interfaces";
-import { type Color, colors, type Command } from "../interface";
+import { formatBytes } from "$ts/bytes";
+import { getDeviceInfo } from "$ts/device";
+import { ArcOSVersion, minArcAPI } from "$ts/env";
+import { ARCOS_BUILD, ARCOS_MODE } from "$ts/metadata";
+import { isDesktop } from "$ts/metadata/desktop";
+import { getServer } from "$ts/server/multi";
+import { UserName } from "$ts/stores/user";
+import { Color, Command, colors } from "../interface";
 import type { ArcTerm } from "../main";
-import { minArcAPI } from "../../env/main";
-import { getServer } from "../../api/server";
 
 export const ArcFetch: Command = {
   keyword: "arcfetch",
@@ -23,22 +24,26 @@ export const ArcFetch: Command = {
 
 async function getItems(a: ArcTerm) {
   const info = getDeviceInfo();
+  const desktop = isDesktop();
+  const desktopStr = desktop ? "Desktop" : "Browser";
 
   return Object.entries({
-    Server: `${getServer()} @ rev ${minArcAPI}`,
-    Username: get(UserName),
-    Processor: `${info.cpu.cores} cores`,
+    OS: `ArcOS ${ArcOSVersion}-${ARCOS_MODE} (${ARCOS_BUILD})`,
+    Host: `${getServer()} @ rev ${minArcAPI}`,
+    Username: UserName.get(),
+    Mode: `${desktopStr}`,
+    Terminal: a.referenceId,
+    CPU: `${info.cpu.cores} cores`,
     GPU: `${info.gpu.vendor} ${info.gpu.model}`,
     Memory: `~ ${formatBytes(info.mem.kb)}`,
-    Reference: a.referenceId,
   });
 }
 
 function colorBar(term: ArcTerm) {
   term.std.write("\n                            ");
 
-  for (let i = 0; i < colors.length; i++) {
-    term.std.writeColor("[██ ]", colors[i] as Color, "white", true);
+  for (const color of colors) {
+    term.std.writeColor("[██ ]", color as Color, "white", true);
   }
 }
 
@@ -46,13 +51,14 @@ async function graphic(term: ArcTerm) {
   const items = await getItems(term);
 
   const graphicParts = [
-    "        ",
-    "    _   ",
-    "   /_\\  ",
-    "  / _ \\ ",
-    " /_/ \\_\\",
-    "        ",
-    "        ",
+    "           ",
+    "     /\\    ",
+    "    /  \\   ",
+    "   / /\\ \\  ",
+    "  / ____ \\ ",
+    " /_/    \\_\\",
+    "           ",
+    "           ",
   ];
 
   for (let i = 0; i < graphicParts.length; i++) {

@@ -7,12 +7,26 @@ export interface Command {
   help?: HelpMethod;
   syntax?: string;
   hidden?: boolean;
+  flags?: Flag[];
 }
+
+export interface Flag {
+  keyword: string;
+  required?: boolean;
+  value?: {
+    name: string;
+    type: "string" | "number" | "boolean" | "other";
+  };
+  description?: string;
+}
+
+export type Arguments = Record<string, string>;
 
 export type CommandMethod = (
   cmd: string,
   argv: string[],
-  term: ArcTerm
+  term: ArcTerm,
+  flags: Arguments
 ) => false | Promise<false> | any;
 export type HelpMethod = (term: ArcTerm) => any;
 
@@ -28,6 +42,19 @@ export type Color =
   | "aqua"
   | "white"
   | "gray";
+
+export const ColorTranslations = {
+  r: "red",
+  g: "green",
+  o: "orange",
+  y: "yellow",
+  b: "blue",
+  p: "purple",
+  a: "aqua",
+  w: "white",
+  G: "gray",
+  "*": "RESET",
+};
 
 export const colors = "red,orange,yellow,green,aqua,blue,purple".split(",");
 

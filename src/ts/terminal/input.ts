@@ -1,5 +1,5 @@
-import { Log } from "../console";
-import sleep from "../sleep";
+import { Log } from "$ts/console";
+import { sleep } from "$ts/util";
 import type { ArcTermEnv } from "./env";
 import type { ArcTerm } from "./main";
 
@@ -21,10 +21,7 @@ export class ArcTermInput {
   }
 
   public commandLoop() {
-    Log(
-      `ArcTerm ${this.term.referenceId}`,
-      `input.commandLoop: Starting command loop`
-    );
+    Log(`ArcTerm ${this.term.referenceId}`, `input.commandLoop: Starting command loop`);
 
     setInterval(() => {
       if (this.lockInput) return;
@@ -36,7 +33,7 @@ export class ArcTermInput {
       if (!prompt) return;
 
       this.target.append(prompt);
-    });
+    }, 10);
   }
 
   public lock() {
@@ -65,13 +62,7 @@ export class ArcTermInput {
     wrap.className = "prompt";
 
     if (this.term.std.verbose)
-      this.term.std.writeColor(
-        this.getPrompt(),
-        this.env.promptColor,
-        "white",
-        true,
-        wrap
-      );
+      this.term.std.writeColor(this.getPrompt(), this.env.promptColor, "white", true, wrap);
 
     input.id = `input#${Math.floor(Math.random() * 1e9)}`;
     input.spellcheck = false;
@@ -84,39 +75,42 @@ export class ArcTermInput {
 
     wrap.append(inner);
 
+    setTimeout(() => {
+      this.term.std.focusInput();
+    });
+
     return wrap;
   }
 
   private async processInputEvent(e: KeyboardEvent, input: HTMLInputElement) {
+    if (!e || !input) return;
+
     const split = input.value.split("&&");
     const key = e.key.toLowerCase();
 
     switch (key) {
       case "enter":
+        this.term.history.append(input.value);
         this.processCommands(split);
         break;
-      case "f2":
-        this.restorePreviousCommand();
-        break;
+      case "arrowup":
+        input.value = this.term.history.changeIndexRelatively(-1);
+        await sleep(0);
+        input.setSelectionRange(input.value.length, input.value.length);
+        return;
+      case "arrowdown":
+        input.value = this.term.history.changeIndexRelatively(1);
+        await sleep(0);
+        input.setSelectionRange(input.value.length, input.value.length);
+        return;
     }
   }
 
-  private restorePreviousCommand() {
-    Log(`ArcTerm ${this.term.referenceId}`, `input.restorePreviousCommand`);
+  public async processCommands(lines: string[], file = "") {
+    await sleep();
 
-    const hist = this.term.commandHandler.history;
-    const latest = hist[hist.length - 1];
-
-    if (!this.current || !latest) return;
-
-    this.current.value = latest;
-  }
-
-  public async processCommands(split: string[], file = "") {
-    await sleep(0);
-
-    for (let i = 0; i < split.length; i++) {
-      const str = this.term.vars.replace(split[i].trim());
+    for (const line of lines) {
+      const str = this.term.vars.replace(line.trim());
       const args = str.split(" ");
       const cmd = args[0];
 
@@ -126,11 +120,7 @@ export class ArcTermInput {
 
       args.shift();
 
-      const success = await this.term.commandHandler.evaluate(
-        cmd,
-        args,
-        !!file
-      );
+      const success = await this.term.commandHandler.evaluate(cmd, args, !!file);
 
       if (!success) {
         return false;
@@ -138,7 +128,7 @@ export class ArcTermInput {
 
       this.lock();
 
-      await sleep(0);
+      await sleep();
     }
 
     this.unlock();

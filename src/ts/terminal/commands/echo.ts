@@ -8,12 +8,15 @@ export const Echo: Command = {
     if (Regx && Regx.length > 1) {
       const text = term.vars.replace(Regx[1]);
 
-      term.std.writeLine(text);
+      term.std.newWriteColor(text);
 
       return;
     }
 
     term.std.Error("Unable to echo: syntax invalid!");
+  },
+  help(term) {
+    term.std.writeColor('Example: [echo] "I <3 ArcOS!"', "blue");
   },
   description: "Echo a string.",
   syntax: `"<[string]>"`,

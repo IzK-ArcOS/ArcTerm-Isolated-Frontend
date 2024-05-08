@@ -1,15 +1,13 @@
-import { Log } from "../console";
-import { LogLevel } from "../console/interface";
-import { ArcOSVersion } from "../env/main";
-import sleep from "../sleep";
+import { Log } from "$ts/console";
+import { sleep } from "$ts/util";
 import { ArcTermCommandHandler } from "./commands";
 import { ArcTermEnv } from "./env";
+import { ArcTermHistory } from "./history";
 import { ArcTermInput } from "./input";
 import type { CommandStore } from "./interface";
 import { ArcTermScripts } from "./scripts";
 import { ArcTermSections } from "./sect";
 import { ArcTermStd } from "./std";
-import { gooseBumpsCommands } from "./store";
 import { ArcTermUtil } from "./util";
 import { ArcTermVariables } from "./var";
 
@@ -25,6 +23,7 @@ import { ArcTermVariables } from "./var";
 export class ArcTerm {
   target: HTMLDivElement;
   commands: CommandStore;
+  r;
   std: ArcTermStd;
   util: ArcTermUtil;
   env: ArcTermEnv;
@@ -33,18 +32,19 @@ export class ArcTerm {
   path: string;
   scripts: ArcTermScripts;
   sect: ArcTermSections;
+  history: ArcTermHistory;
   commandHandler: ArcTermCommandHandler;
   referenceId: string;
   onload: (term: ArcTerm) => void;
 
   constructor(
-    t: HTMLDivElement,
-    cS: CommandStore,
-    cb?: (term: ArcTerm) => void
+    target: HTMLDivElement,
+    store: CommandStore,
+    callback?: (term: ArcTerm) => void
   ) {
-    this.target = t;
-    this.commands = cS;
-    this.onload = cb;
+    this.target = target;
+    this.commands = store;
+    this.onload = callback;
 
     this.initialize();
   }
@@ -53,42 +53,46 @@ export class ArcTerm {
     this.util = new ArcTermUtil(this);
     this.referenceId = this.util.getReference();
 
-    Log(
-      `ArcTerm ${this.referenceId}`,
-      `Initializing new ArcTerm`,
-      LogLevel.info
-    );
+    Log(`ArcTerm ${this.referenceId}`, `Initializing new ArcTerm`);
 
-    this.target.innerText = `Starting ArcTerm v${ArcOSVersion}...`;
+    if (!this.target)
+      throw new Error("Can't initialize ArcTerm without a valid target");
+
+    this.target.innerText = "";
 
     this.target.removeAttribute("style");
-    this.path = ".";
+    this.path = "./";
+    this.history = new ArcTermHistory(this);
     this.commandHandler = new ArcTermCommandHandler(this);
     this.env = new ArcTermEnv(this);
     this.vars = new ArcTermVariables(this);
     this.scripts = new ArcTermScripts(this);
     this.sect = new ArcTermSections(this);
 
-    setTimeout(async () => {
-      this.std = new ArcTermStd(this);
-      this.input = new ArcTermInput(this);
+    await sleep(50);
 
-      this.input.lock();
+    this.std = new ArcTermStd(this);
+    this.input = new ArcTermInput(this);
 
-      if (this.onload) await this.onload(this);
+    this.input.lock();
 
-      await sleep(100);
+    if (this.onload) await this.onload(this);
 
-      this.input.unlock();
-      this.util.intro();
-      this.util.flushAccent();
+    await this.env.config.loadConfigFile();
 
-      if (this.env.gooseBumps) this.std.Warning("GooseBumps 👀\n\n");
-    }, 1000);
+    this.intro();
+  }
+
+  public intro() {
+    this.util.flushAccent();
+    this.input.unlock();
+    this.util.intro();
+
+    if (this.env.gooseBumps) this.std.Warning("GooseBumps 👀\n\n");
   }
 
   public dispose() {
-    Log(`ArcTerm ${this.referenceId}`, "Disposing", LogLevel.info);
+    Log(`ArcTerm ${this.referenceId}`, "Disposing");
 
     if (!this.target) return;
 
@@ -99,15 +103,14 @@ export class ArcTerm {
     this.input = null;
   }
 
-  public reload() {
-    Log(`ArcTerm ${this.referenceId}`, "Reloading", LogLevel.info);
+  public async reload() {
+    Log(`ArcTerm ${this.referenceId}`, "Reloading");
 
     this.dispose(); // Dispose the current instance, locking ArcTerm
 
     // Re-initialize ArcTerm with the exact same initial parameters
     // after the next frame has advanced
-    setTimeout(async () => {
-      await this.initialize();
-    });
+    await sleep();
+    await this.initialize();
   }
 }

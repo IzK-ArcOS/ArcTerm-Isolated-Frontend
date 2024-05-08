@@ -1,34 +1,31 @@
-export function getSwitches(argv: string[]) {
-  let switches: { [key: string]: string } = {};
-  let currentArg = "";
+import { Arguments } from "./interface";
 
-  const prefix = "--";
+/**
+ * Parses the ArcTerm flags from the ArcTerm input
+ * @param args The argument string to parse from
+ * @returns The parsed flags
+ */
+export function parseFlags(args: string): Arguments {
+  const regex = /(?:--(?<nl>[a-z\-]+)(?:="(?<vl>.*?)"|(?:=(?<vs>.*?)(?: |$))|)|-(?<ns>[a-zA-Z]))/gm; //--name=?value
+  const matches: RegExpMatchArray[] = [];
 
-  for (let i = 0; i < argv.length; i++) {
-    if (argv[i].startsWith(prefix)) {
-      const arg = argv[i].replace(prefix, "");
+  let match: RegExpExecArray | null;
 
-      currentArg = arg == currentArg ? currentArg : arg;
-
-      if (!switches[currentArg]) switches[currentArg] = "";
-    } else if (currentArg) {
-      switches[currentArg] += `${argv[i]} `;
-    }
+  while ((match = regex.exec(args))) {
+    matches.push(match);
   }
 
-  for (const key in switches) {
-    switches[key] = switches[key].trim();
+  const result = {};
+  const arglist = matches.map((match) => {
+    const name = match.groups.nl || match.groups.ns;
+    const value = match.groups.vl || match.groups.vs || true; // make it true if the flag has no value at all
+
+    return { name, value };
+  });
+
+  for (const arg of arglist) {
+    result[arg.name] = arg.value;
   }
 
-  return switches;
-}
-
-export function switchExists(argv: string[], key: string): boolean {
-  const switches = getSwitches(argv);
-
-  for (const sw in switches) {
-    if (sw == key) return true;
-  }
-
-  return false;
+  return result;
 }

@@ -1,30 +1,26 @@
+import { Log } from "$ts/console";
+import { sleep } from "$ts/util";
+import { LogLevel } from "$types/console";
 import { get, writable } from "svelte/store";
-import { Log } from "../../console";
-import { LogLevel } from "../../console/interface";
-import type { ArcTermStd } from "../std";
-import sleep from "../../sleep";
 import type { Color } from "../interface";
+import type { ArcTermStd } from "../std";
 
 export class ArcTermStdSelect {
   private std: ArcTermStd;
   private _sent = writable(false);
-  private _options: string[] = [];
+  private _options = [];
   private _index = 0;
   private _elements: HTMLDivElement[] = [];
   private _color: Color;
 
-  constructor(std: ArcTermStd, color?: Color) {
-    Log(
-      `ArcTerm ${std.term.referenceId}`,
-      `Creating new ArcTermStdSelect`,
-      LogLevel.info
-    );
+  constructor(std: ArcTermStd, color?: Color, private target = std.target) {
+    Log(`ArcTerm ${std.term.referenceId}`, `Creating new ArcTermStdSelect`, LogLevel.info);
 
     this._color = color || "blue";
     this.std = std;
   }
 
-  private getStr(index: number, string: string): string {
+  private getStr(index: number, string: number): string {
     const current = index == this._index;
     const sent = get(this._sent) && current;
     const prefix = current ? "> [" : "  ";
@@ -37,17 +33,14 @@ export class ArcTermStdSelect {
     for (let i = 0; i < this._elements.length; i++) {
       const element = this._elements[i];
 
-      this.std.updateColor(
-        element,
-        this.getStr(i, this._options[i]),
-        this._color,
-        "gray"
-      );
+      this.std.updateColor(element, this.getStr(i, this._options[i]), this._color, "gray");
     }
   }
 
   private keyDown(e: KeyboardEvent): void {
-    if (!e.key || get(this._sent)) return;
+    const app = this.std.term.app;
+
+    if (!e.key || get(this._sent) /* FIXME || (app && get(focusedWindowId) !== app.id) */) return;
 
     const key = e.key.toLowerCase();
     const min = 0;
@@ -87,7 +80,7 @@ export class ArcTermStdSelect {
 
     for (let i = 0; i < options.length; i++) {
       const str = this.getStr(i, this._options[i]);
-      const element = this.std.writeColor(str, this._color, "gray");
+      const element = this.std.writeColor(str, this._color, "gray", false, this.target);
 
       this._elements.push(element);
     }

@@ -1,5 +1,7 @@
+import { Nullable } from "$types/common";
+
 export class Cache<T> {
-  private _data: T;
+  private _data: Nullable<T>;
   id: string;
 
   constructor(id: string, initial?: T) {

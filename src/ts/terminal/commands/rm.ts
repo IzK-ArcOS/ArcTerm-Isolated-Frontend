@@ -1,4 +1,4 @@
-import { deleteItem } from "../../api/fs/delete";
+import { deleteItem } from "$ts/server/fs/delete";
 import type { Command } from "../interface";
 
 export const Rm: Command = {
@@ -18,7 +18,7 @@ export const Rm: Command = {
   },
   help(term) {
     term.std.writeColor("[NOTE]: Capitalization matters.", "yellow");
-    term.std.writeColor("Example: [soundbus] play ...", "blue");
+    term.std.writeColor("Example: [rm] mwomp.txt", "blue");
   },
   description: "Delete a file or folder",
   syntax: `"<[name]>"`,

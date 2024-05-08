@@ -5,9 +5,11 @@ export const Config: Command = {
   exec(cmd, argv, term) {
     const e = Object.entries(term.env.config.getConfig());
 
-    for (let i = 0; i < e.length; i++) {
-      const str = e[i][1].toString();
-      const key = e[i][0].padEnd(20, " ");
+    for (const [k, v] of e) {
+      const str = v.toString().replaceAll("\n", "\\n");
+      const key = k.padEnd(20, " ");
+
+      if (k === "gooseBumps") continue;
 
       term.std.writeColor(`# [${key}]: `, "blue", "white", true);
       term.std.write(`${str}`);

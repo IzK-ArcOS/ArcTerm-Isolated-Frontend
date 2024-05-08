@@ -1,19 +1,19 @@
-import sleep from "../../sleep";
+import { sleep } from "$ts/util";
 import type { Command } from "../interface";
 
 export const Reset: Command = {
   keyword: "reset",
   async exec(cmd, argv, term) {
     term.std.writeLine(
-      "Are you sure you want to reset ArcTerm Isolated? This will not affect any ArcAPI data.\n\n"
+      "Are you sure you want to reset ArcOS?\nThis will not affect any ArcAPI data.\n\n"
     );
-    const confirm = (await term.std.read("Y/N [", "]", 1)).toLowerCase();
+    const confirmed = (await term.std.select(["Yes, reset it", "No, abort"], "red")) == 0;
 
-    if (confirm != "y") return term.std.Error("Reset aborted.");
+    if (!confirmed) return term.std.Error("Reset aborted.");
 
     localStorage.clear();
     location.reload();
     await sleep(3000);
   },
-  description: "Reset local ArcTerm Isolated instance",
+  description: "Reset local ArcOS instance",
 };

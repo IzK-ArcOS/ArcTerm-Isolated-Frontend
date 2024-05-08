@@ -1,10 +1,12 @@
+import { Log } from "$ts/console";
+import { sleep } from "$ts/util";
+import { LogLevel } from "$types/console";
 import { writable } from "svelte/store";
-import { Log } from "../console";
-import { LogLevel } from "../console/interface";
 import type { ArcTermEnv } from "./env";
-import type { Color } from "./interface";
+import { ColorTranslations, type Color } from "./interface";
 import type { ArcTerm } from "./main";
 import { ArcTermStdSelect } from "./std/select";
+import { COLOR_CHAR } from "./store";
 
 export class ArcTermStd {
   target: HTMLDivElement;
@@ -13,11 +15,7 @@ export class ArcTermStd {
   verbose = true;
 
   constructor(parent: ArcTerm) {
-    Log(
-      `ArcTerm ${parent.referenceId}`,
-      `Creating new ArcTermStd`,
-      LogLevel.info
-    );
+    Log(`ArcTerm ${parent.referenceId}`, `Creating new ArcTermStd`);
 
     this.target = parent.target;
     this.term = parent;
@@ -41,6 +39,24 @@ export class ArcTermStd {
 
     target.appendChild(el);
 
+    this.focusTarget();
+
+    return el;
+  }
+
+  public writeHTML(str: string, inline = false, target = this.target) {
+    const el = document.createElement("div");
+
+    el.className = "part";
+
+    if (inline) el.className += " inline";
+
+    el.innerHTML = str;
+
+    target.appendChild(el);
+
+    this.focusTarget();
+
     return el;
   }
 
@@ -55,28 +71,53 @@ export class ArcTermStd {
     inline = false,
     target = this.target
   ) {
-    const x = str.split(/(\[[^\]]*\])/);
-
+    if (str.length > 3) console.log(`${pri},${sec}->${str}`);
+    const parts = str.split(/(\[[^\]]*\])/);
     const out = document.createElement("div");
 
     out.className = `part `;
 
     if (inline) out.className += " inline";
 
-    for (let i = 0; i < x.length; i++) {
-      const part = document.createElement("span");
-      const isPart = x[i].startsWith("[") && x[i].endsWith("]");
-      const content = x[i].replaceAll("[", "").replaceAll("]", "");
+    for (const part of parts) {
+      const element = document.createElement("span");
+      const isPart = part.startsWith("[") && part.endsWith("]");
+      const content = part.replaceAll("[", "").replaceAll("]", "");
 
-      part.className = `clr-${isPart ? pri : sec}`;
-      part.innerText = content;
+      element.className = `clr-${isPart ? pri : sec}`;
+      element.innerText = content;
 
-      out.append(part);
+      out.append(element);
     }
 
     target.append(out);
 
+    this.focusTarget();
+
     return out;
+  }
+
+  public newWriteColor(str: string, inline = false, target = this.target) {
+    let currentColor: Color = "white";
+
+    for (let i = 0; i < str.length; i++) {
+      if (str[i] == COLOR_CHAR) {
+        if (!str[i + 1]) continue;
+
+        const color = ColorTranslations[str[i + 1]];
+
+        if (!color) continue;
+
+        currentColor = color == "RESET" ? "white" : color;
+
+        i++;
+        continue;
+      }
+
+      this.writeColor(`[${str[i]}]`, currentColor, "white", true);
+    }
+
+    if (!inline) this.writeLine("\n");
   }
 
   public writeImage(src: string, height: number) {
@@ -87,6 +128,8 @@ export class ArcTermStd {
     el.src = src;
 
     this.target.append(el);
+
+    this.focusTarget();
   }
 
   public update(el: HTMLDivElement, str: string) {
@@ -151,7 +194,8 @@ export class ArcTermStd {
     suffix: string,
     max: number,
     pswd = false,
-    value = ""
+    value = "",
+    target: HTMLDivElement = this.target
   ): Promise<string> {
     if (!this.target) return "asdf";
 
@@ -175,8 +219,12 @@ export class ArcTermStd {
     wrapper.className = "userinput";
     wrapper.append(prefix, input, suffix);
 
-    this.target.append(wrapper);
+    target.append(wrapper);
     this.term.input.current = input;
+
+    await sleep(10);
+
+    this.focusInput();
 
     input.addEventListener("keydown", (e) => {
       if (!e.key) return;
@@ -199,12 +247,41 @@ export class ArcTermStd {
     });
   }
 
-  public clear() {
+  public initTarget() {
     this.target.innerText = "";
+
+    const trigger = document.createElement("div");
+
+    trigger.className = "click-trigger";
+
+    this.target.addEventListener("click", () => this.focusInput());
+    this.target.append(trigger);
   }
 
-  public async select(options: string[], color?: Color): Promise<number> {
-    const select = new ArcTermStdSelect(this, color);
+  public focusInput() {
+    if (!this.term || !this.term.input || !this.term.input.current) return;
+
+    this.term.input.current.focus();
+
+    this.focusTarget();
+  }
+
+  public focusTarget() {
+    if (!this.target) return;
+
+    this.target.scrollTo(0, this.target.scrollHeight);
+  }
+
+  public clear() {
+    this.initTarget();
+  }
+
+  public async select(
+    options: string[],
+    color?: Color,
+    target = this.target
+  ): Promise<number> {
+    const select = new ArcTermStdSelect(this, color, target);
 
     return await select.create(options);
   }

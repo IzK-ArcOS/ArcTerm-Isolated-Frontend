@@ -1,6 +1,6 @@
-import { getDirectory, sortDirectories } from "../../api/fs/directory";
-import { sortFiles } from "../../api/fs/file";
-import type { UserDirectory } from "../../api/interface";
+import { readDirectory } from "$ts/server/fs/dir";
+import { sortDirectories, sortFiles } from "$ts/server/fs/sort";
+import { UserDirectory } from "$types/fs";
 import type { Command } from "../interface";
 import type { ArcTerm } from "../main";
 
@@ -8,7 +8,7 @@ export const Ls: Command = {
   keyword: "ls",
   async exec(cmd, argv, term) {
     const path = term.path as string;
-    const dir = (await getDirectory(path)) as UserDirectory;
+    const dir = (await readDirectory(path)) as UserDirectory;
 
     if (argv[0]) return specific(argv[0], path, term);
     all(dir, term);
@@ -21,15 +21,11 @@ function all(dir: UserDirectory, term: ArcTerm) {
   const subdirs = sortDirectories(dir.directories);
   const files = sortFiles(dir.files);
 
-  for (let i = 0; i < subdirs.length; i++) {
-    const subdir = subdirs[i];
-
-    term.std.writeColor(`[${subdir.name}  ]`, "blue");
+  for (const dir of subdirs) {
+    term.std.writeColor(`[${dir.name}  ]`, "blue");
   }
 
-  for (let i = 0; i < files.length; i++) {
-    const file = files[i];
-
+  for (const file of files) {
     term.std.writeColor(`[${file.filename}  ]`, "aqua");
   }
 
@@ -39,31 +35,25 @@ function all(dir: UserDirectory, term: ArcTerm) {
 }
 
 async function specific(path: string, currentPath: string, term: ArcTerm) {
-  if (currentPath != ".") {
+  if (currentPath != "." && currentPath != "./") {
     path = currentPath + "/" + path;
   }
 
-  const dir = (await getDirectory(path)) as UserDirectory;
+  const dir = (await readDirectory(path)) as UserDirectory;
   const subdirs = sortDirectories(dir.directories);
   const files = sortFiles(dir.files);
 
-  if (dir.scopedPath == undefined) {
+  if (!dir || dir.scopedPath == undefined) {
     term.std.Error(`The directory doesn't exist in this path.`);
     return;
   }
 
-  for (let i = 0; i < subdirs.length; i++) {
-    const subdir = subdirs[i];
-
-    term.std.writeColor(`[${subdir.name}]`, "blue");
+  for (const dir of subdirs) {
+    term.std.writeColor(`[${dir.name}]`, "blue");
   }
 
-  for (let i = 0; i < files.length; i++) {
-    const file = files[i];
-
+  for (const file of files) {
     term.std.writeColor(`[${file.filename}]`, "aqua");
-
-    return;
   }
 
   if (subdirs.length == 0 && files.length == 0) {

@@ -1,6 +1,7 @@
-import { getDirectory } from "../../api/fs/directory";
-import { readFile } from "../../api/fs/file";
-import type { UserDirectory } from "../../api/interface";
+import { blobToText } from "$ts/server/fs/convert";
+import { readDirectory } from "$ts/server/fs/dir";
+import { readFile } from "$ts/server/fs/file";
+import type { UserDirectory } from "$types/fs";
 import type { Command } from "../interface";
 
 export const Rf: Command = {
@@ -8,21 +9,20 @@ export const Rf: Command = {
   async exec(cmd, argv, term) {
     const path = term.path as string;
     const fn = argv.join(" ").trim();
-    const dir = (await getDirectory(path)) as UserDirectory;
+    const dir = (await readDirectory(path)) as UserDirectory;
 
-    for (let i = 0; i < dir.files.length; i++) {
-      const file = dir.files[i];
+    if (!dir) return term.std.Error("Could not read the current directory!");
 
-      if (file.filename == fn) {
-        const contents = await readFile(file.scopedPath);
+    for (const partial of dir.files) {
+      if (partial.filename == fn) {
+        const file = await readFile(partial.scopedPath);
 
-        if (!contents) return term.std.Error("Could not read the file.");
+        if (!file) return term.std.Error("Could not read the file.");
 
-        if (!file.mime.includes("text/"))
+        if (!partial.mime.includes("text/"))
           return term.std.Error("Not attempting to read non-text file.");
 
-        const enc = new TextDecoder("utf-8");
-        const d = enc.decode(new Uint8Array(contents));
+        const d = await blobToText(file.data);
 
         term.std.writeLine(d);
 

@@ -1,19 +1,20 @@
-import { get } from "svelte/store";
-import { getDirectory } from "../../api/fs/directory";
-import { Log } from "../../console";
-import { ArcOSVersion } from "../../env/main";
-import { UserName } from "../../userlogic/interfaces";
-import { type Color, colors, type VariableStore } from "../interface";
+import { Log } from "$ts/console";
+import { ArcOSVersion } from "$ts/env";
+import { readDirectory } from "$ts/server/fs/dir";
+import { getServer } from "$ts/server/multi";
+import { UserName } from "$ts/stores/user";
+import { Color, colors, VariableStore } from "../interface";
 import type { ArcTerm } from "../main";
-import { getServer } from "../../api/server";
-import { LogLevel } from "../../console/interface";
+import { COLOR_CHAR } from "../store";
 
+/**
+ * Gets the ArcTerm variable store based on the current ArcTerm Class instance
+ * @param term ArcTerm Class
+ * @returns The variable store
+ */
 export function getArcTermStore(term: ArcTerm): VariableStore {
-  Log(
-    `ArcTerm ${term.referenceId}`,
-    "Creating new ArcTermVariableStore",
-    LogLevel.info
-  );
+  Log(`ArcTerm ${term.referenceId}`, "Creating new ArcTermVariableStore");
+
   return {
     prompt: {
       get: () => term.env.prompt,
@@ -31,7 +32,7 @@ export function getArcTermStore(term: ArcTerm): VariableStore {
       canDelete: false,
     },
     username: {
-      get: () => get(UserName),
+      get: () => UserName.get(),
       readOnly: true,
       canDelete: false,
     },
@@ -41,9 +42,9 @@ export function getArcTermStore(term: ArcTerm): VariableStore {
       canDelete: false,
     },
     pwd: {
-      get: () => (term.path || ".").replace(".", ""),
+      get: () => (term.path || "./").replace("./", ""),
       set: async (v) => {
-        const dir = await getDirectory(v);
+        const dir = await readDirectory(v);
 
         if (!dir)
           return term.std.Error(`pwd: Directory doesn't exist, falling back.`);
@@ -71,6 +72,21 @@ export function getArcTermStore(term: ArcTerm): VariableStore {
     ref: {
       get: () => term.referenceId,
 
+      readOnly: true,
+      canDelete: false,
+    },
+    $: {
+      get: () => `ArcTerm ${term.referenceId}`,
+      readOnly: true,
+      canDelete: false,
+    },
+    ";": {
+      get: () => COLOR_CHAR,
+      readOnly: true,
+      canDelete: false,
+    },
+    rand: {
+      get: () => `${Math.floor(Math.random() * 1e6)}`,
       readOnly: true,
       canDelete: false,
     },

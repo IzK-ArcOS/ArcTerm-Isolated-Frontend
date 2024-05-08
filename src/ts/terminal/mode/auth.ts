@@ -1,17 +1,16 @@
+import { ArcOSVersion } from "$ts/env";
+import { ARCOS_MODE } from "$ts/metadata";
+import { setAuthcode } from "$ts/server/authcode";
+import { addServer, getServer } from "$ts/server/multi";
+import { testConnection } from "$ts/server/test";
+import { Authenticate, doRememberedAuth } from "$ts/server/user/auth";
+import { UserName } from "$ts/stores/user";
+import { sleep } from "$ts/util";
 import { get } from "svelte/store";
-import { generateCredToken } from "../../api/cred";
-import { rememberedLogin } from "../../api/getter";
-import { testConnection } from "../../api/test";
-import { ArcOSVersion } from "../../env/main";
-import sleep from "../../sleep";
-import { UserName } from "../../userlogic/interfaces";
 import type { ArcTerm } from "../main";
-import { addServer, getServer } from "../../api/server";
-import { setAuthcode } from "../../api/authcode";
-import { ARCOS_MODE } from "../../branding";
 
-export async function authPrompt(term: ArcTerm, usr = "") {
-  const udata = get(UserName);
+export async function authPrompt(term: ArcTerm, usr = "", keep = false) {
+  const udata = UserName.get();
 
   if (udata) return true;
 
@@ -19,33 +18,28 @@ export async function authPrompt(term: ArcTerm, usr = "") {
 
   if (!api) api = await serverConnect(term);
 
-  await rememberedLogin();
+  await doRememberedAuth();
 
-  await sleep(250);
+  await sleep(0);
 
-  if (get(UserName)) {
-    await term.env.config.loadConfigFile();
-    return true;
+  if (get(UserName)) return true;
+
+  if (!keep) {
+    term.std.clear();
+    term.std.writeLine(`ArcTerm ${ArcOSVersion} ${ARCOS_MODE} ${api} atm1\n\n`);
   }
-
-  term.std.clear();
-  term.std.writeLine(`ArcTerm ${ArcOSVersion} ${ARCOS_MODE} ${api} atm1\n\n`);
 
   const { username, password } = await authPromptFields(term, api, usr);
 
-  const token = generateCredToken({ username: username, password });
-
-  localStorage.setItem("arcos-remembered-token", token);
-
-  await rememberedLogin();
+  await Authenticate(username, password);
 
   if (!get(UserName)) {
     term.std.writeLine("\nLogin incorrect");
 
-    return await authPromptFields(term, api, usr);
-  }
+    localStorage.removeItem("arcos-remembered-token");
 
-  await term.env.config.loadConfigFile();
+    return await authPrompt(term, usr, true);
+  }
 
   return true;
 }
@@ -72,8 +66,7 @@ async function serverConnect(term: ArcTerm) {
 
   term.std.writeLine(`Connecting to ${server}...`);
 
-  if (!(await testConnection(server, authCode)))
-    return await serverConnect(term);
+  if (!(await testConnection(server, authCode))) return await serverConnect(term);
 
   addServer(server);
   setAuthcode(server, authCode);

@@ -1,12 +1,14 @@
-import { getDirectory } from "../api/fs/directory";
-import { readFile } from "../api/fs/file";
-import { arrayToText } from "../api/fs/file/conversion";
-import { Log } from "../console";
-import { LogLevel } from "../console/interface";
+import { Log } from "$ts/console";
+import { blobToText } from "$ts/server/fs/convert";
+import { readDirectory } from "$ts/server/fs/dir";
+import { readFile } from "$ts/server/fs/file";
+import { LogLevel } from "$types/console";
+import { ArcFile } from "$types/fs";
 import type { ArcTerm } from "./main";
 
 export class ArcTermScripts {
   term: ArcTerm;
+  buffer: Record<string, ArcFile> = {};
 
   constructor(term: ArcTerm) {
     Log(`ArcTerm ${term.referenceId}`, `Creating new ArcTermScripts`);
@@ -20,17 +22,17 @@ export class ArcTermScripts {
       `scripts.detectScript: Detecting ${cmd} in ${directory}`
     );
 
-    const dir = await getDirectory(directory);
+    const dir = await readDirectory(directory);
 
     if (!dir) return null;
 
     const files = dir.files;
 
-    for (let i = 0; i < files.length; i++) {
-      const name = files[i].filename;
-      const path = files[i].scopedPath;
+    for (const file of files) {
+      const name = file.filename.toLowerCase();
+      const path = file.scopedPath;
 
-      if (name.startsWith(cmd) && (await this.isScriptFile(path))) return path;
+      if (name == `${cmd}.arcterm` && (await this.isScriptFile(path))) return path;
     }
   }
 
@@ -39,19 +41,18 @@ export class ArcTermScripts {
 
     if (!file) return false;
 
-    const d = arrayToText(file);
+    this.buffer[path] = file;
+
+    const d = await blobToText(file.data);
     const split = d.split("\n");
 
     return split[0].startsWith("#!arcterm");
   }
 
   public async runScriptFile(path: string) {
-    Log(
-      `ArcTerm ${this.term.referenceId}`,
-      `scripts.runScriptFile: running ${path}`
-    );
+    Log(`ArcTerm ${this.term.referenceId}`, `scripts.runScriptFile: running ${path}`);
 
-    const contents = await readFile(path);
+    const contents = this.buffer[path] || (await readFile(path));
 
     if (!contents)
       return Log(
@@ -60,7 +61,7 @@ export class ArcTermScripts {
         LogLevel.error
       );
 
-    const d = this.term.sect.parse(arrayToText(contents));
+    const d = this.term.sect.parse(await blobToText(contents.data));
     const parts = d.split("\n").filter((l) => !!l);
 
     await this.term.input.processCommands(parts, path);

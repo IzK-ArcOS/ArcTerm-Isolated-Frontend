@@ -1,40 +1,34 @@
-import { get } from "svelte/store";
-import { getFSQuota } from "../api/fs/quota";
-import { formatBytes } from "../api/fs/sizes";
-import { apiCall, ConnectedServer } from "../api/main";
-import { UserName } from "../userlogic/interfaces";
+import { formatBytes } from "$ts/bytes";
+import { Log } from "$ts/console";
+import { getFSQuota } from "$ts/server/fs/quota";
+import { getServer } from "$ts/server/multi";
+import { ConnectedServer } from "$ts/stores/server";
+import { UserCache, UserName } from "$ts/stores/user";
 import type { ArcTerm } from "./main";
 import { authPrompt } from "./mode/auth";
-import { getServer } from "../api/server";
-import { Log } from "../console";
-import { LogLevel } from "../console/interface";
-import { UserCache } from "../userlogic/cache";
 
-export async function arcTermModeIntro(a: ArcTerm) {
-  Log(`ArcTerm ${a.referenceId}`, "Viewing ArcTermMode intro", LogLevel.info);
+export async function arcTermModeIntro(a: ArcTerm, cb?: () => any) {
+  Log(`ArcTerm ${a.referenceId}`, "Viewing ArcTermMode intro");
 
   if (!(await authPrompt(a))) return;
 
   UserCache.clear();
 
   const server = getServer();
-  const user = get(UserName);
-  const quota = await getFSQuota();
-  const used = formatBytes(quota.used);
-  const max = formatBytes(quota.max);
-  const percentage = ((100 / quota.max) * quota.used).toFixed(2);
-  const connect = await apiCall(get(ConnectedServer), "connect", {});
-  const platform = connect.platform;
+  const user = UserName.get();
+  const platform = ConnectedServer.get().meta.name;
+
+  a.std.clear();
+
+  if (cb) cb();
 
   disclaimer(a);
   auth(a, user, platform);
   api(a, server);
-  usage(a, used, max, percentage);
+  await usage(a);
 }
 
 function disclaimer(term: ArcTerm) {
-  term.std.clear();
-
   term.std.writeColor(
     `[█] You are currently in [ArcTerm mode].\n[█] Commands that require the ArcOS desktop have been disabled.\n\n`,
     "orange"
@@ -56,7 +50,12 @@ function api(term: ArcTerm, server: string) {
   term.std.writeColor(` [(${server})]`, "gray", "white", true);
 }
 
-function usage(term: ArcTerm, used: string, max: string, percent: string) {
+async function usage(term: ArcTerm) {
+  const quota = await getFSQuota();
+  const used = formatBytes(quota.used);
+  const max = formatBytes(quota.max);
+  const percent = ((100 / quota.max) * quota.used).toFixed(2);
+
   term.std.writeColor(
     `\n[ArcFS]: You are using [${used}] of [${max}] total (${percent}%)\n`,
     "yellow"

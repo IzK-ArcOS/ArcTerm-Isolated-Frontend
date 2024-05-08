@@ -1,7 +1,7 @@
-import { getDirectory } from "../../api/fs/directory";
-import { readFile } from "../../api/fs/file";
-import type { UserDirectory } from "../../api/interface";
-import { getSwitches } from "../argv";
+import { tryParseInt } from "$ts/int";
+import { readDirectory } from "$ts/server/fs/dir";
+import { readFile } from "$ts/server/fs/file";
+import type { UserDirectory } from "$types/fs";
 import type { Command } from "../interface";
 import type { ArcTerm } from "../main";
 
@@ -9,52 +9,67 @@ const DEFSIZE = 20;
 
 export const Ri: Command = {
   keyword: "ri",
-  async exec(cmd, argv, term) {
-    const args = getSwitches(argv);
-
-    const file = args["file"];
-    const url = args["url"];
-    let size: number;
-
-    try {
-      size = parseInt(args["height"]);
-    } catch {
-      size = DEFSIZE;
-    }
+  async exec(cmd, argv, term, flags) {
+    const file = flags.file;
+    const url = flags.url;
+    const size = tryParseInt(flags.size);
 
     term.std.writeLine("\n");
 
     if (file) return await displayFile(term, file, size || DEFSIZE);
-
     if (url) return displayUrl(term, url, size || DEFSIZE);
 
     term.std.Error("Missing parameters.");
   },
   help(term) {
     term.std.writeColor(
-      "Example: [ri] --url https://tinyurl.com/arcoslogo",
+      `Example: [ri] --url="https://tinyurl.com/arcoslogo"`,
       "blue"
     );
   },
   description: "Display image from ArcFS or URL",
-  syntax: "(--[file]) <[path]> (--[url]) <[url]> (--[height]) <[height]>",
+  flags: [
+    {
+      keyword: "file",
+      value: {
+        name: "path",
+        type: "string",
+      },
+      description:
+        "The ArcFS path to read the image from. Specify if you want to read from the filesystem.",
+    },
+    {
+      keyword: "url",
+      value: {
+        name: "url",
+        type: "string",
+      },
+      description:
+        "The URL to read the image from. Specify if you want to read from a web resource.",
+    },
+    {
+      keyword: "height",
+      value: {
+        name: "pixels",
+        type: "number",
+      },
+      description:
+        "The height in pixels of the image to be displayed. Defaults to 20px.",
+    },
+  ],
 };
 
 async function displayFile(term: ArcTerm, fn: string, height: number) {
   const path = term.path as string;
+  const dir = (await readDirectory(path)) as UserDirectory;
 
-  const dir = (await getDirectory(path)) as UserDirectory;
+  for (const partial of dir.files) {
+    if (partial.filename == fn) {
+      const file = await readFile(partial.scopedPath);
 
-  for (let i = 0; i < dir.files.length; i++) {
-    const file = dir.files[i];
+      if (!file) return term.std.Error("Could not read the file.");
 
-    if (file.filename == fn) {
-      const contents = await readFile(file.scopedPath);
-
-      if (!contents) return term.std.Error("Could not read the file.");
-
-      const blob = new Blob([new Uint8Array(contents)], { type: file.mime });
-
+      const blob = file.data;
       const url = URL.createObjectURL(blob);
 
       term.std.writeImage(url, height);
@@ -64,6 +79,6 @@ async function displayFile(term: ArcTerm, fn: string, height: number) {
   }
 }
 
-export function displayUrl(term: ArcTerm, url: string, height: number) {
+function displayUrl(term: ArcTerm, url: string, height: number) {
   term.std.writeImage(url, height || DEFSIZE);
 }
